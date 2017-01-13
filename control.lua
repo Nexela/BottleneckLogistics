@@ -1,36 +1,30 @@
+local UPDATE_FULFILLED = false
+local DEBUG = false
+
 MOD = {}
 MOD.name = "BottleneckLogistics"
 MOD.interface = MOD.name
 MOD.events = remote.call("Bottleneck", "get_ids")
 
---change_signal
---get_signal_position
+if DEBUG then
+  require("stdlib/utils/quickstart")
+end
 
--- function update.logistic(data)
--- local entity = data.entity
--- local network = entity.logistic_network
--- if network then
--- if entity.request_slot_count > 0 then
--- local satisfied = false
--- -- for _, ent in pairs(network.full_or_satisfied_requesters) do
--- -- if entity==ent then
--- -- satisfied = true
--- -- break
--- -- end
--- -- end
--- if satisfied then
--- change_signal(data, light.green)
--- else
--- change_signal(data, light.yellow)
--- end
--- else
--- change_signal(data, light.green)
--- end
--- else
--- change_signal(data, light.red)
--- end
--- end
---Faster to just change the color than it is to check it first.
+--[[ Testing Code
+/c
+SEL=game.player.selected
+for i=1, 2000 do
+  local ent = SEL.surface.create_entity{
+    name="logistic-chest-requester",
+    force=SEL.force,
+    position=SEL.surface.find_non_colliding_position("logistic-chest-requester", SEL.position, 0, 1)
+  }
+  game.raise_event(defines.events.on_built_entity, {created_entity=ent, player_index=game.player.index})
+end
+
+]]
+-------------------------------------------------------------------------------
+--[[Update signals]]
 
 local light = {
   off = defines.direction.north,
@@ -40,11 +34,10 @@ local light = {
 }
 local function change_signal(signal, signal_color)
   signal_color = light[signal_color] or "red"
-  signal.direction = signal_color
+  if signal.direction ~= signal_color then
+    signal.direction = signal_color
+  end
 end
-
--------------------------------------------------------------------------------
---[[Update signals]]
 
 local function update_signal(data)
   local entity = data.entity
@@ -63,10 +56,14 @@ local function build_signal(event)
   if entity.type == "logistic-container" then
     -- local index, network = find_network(entity)
     local data = {}
-    local name = "bottleneck-stoplight"
-    data.position = remote.call("Bottleneck", "get_position_for_signal", entity, 0.05)
+    if math.abs(entity.prototype.collision_box.left_top.x) > .5 then
+      data.name = "bottleneck-stoplight"
+    else
+      data.name = "bottleneck-stoplight-scaled"
+    end
+    data.position = remote.call("Bottleneck", "get_position_for_signal", entity)
     data.entity = entity
-    data.signal = entity.surface.create_entity{name=name, position=data.position, direction=light.off, force=entity.force}
+    data.signal = entity.surface.create_entity{name=data.name, position=data.position, direction=light.off, force=entity.force}
     global.signals[entity.unit_number] = data
     if global.show_bottlenecks == 1 then
       update_signal(data)
@@ -98,7 +95,7 @@ end
 
 local function on_tick()
   if global.show_bottlenecks == 1 then
-    local signals_per_tick = global.signals_per_tick or 100
+    local signals_per_tick = global.signals_per_tick
     local signals = global.signals
     local index, data = global.update_index
 
@@ -116,7 +113,7 @@ local function on_tick()
       if entity.valid and signal.valid then --update if valid
         update_signal(data)
       elseif entity.valid and not signal.valid then --rebuild if signal not valid
-        local name = (global.high_contrast and "bottleneck-stoplight-high") or "bottleneck-stoplight"
+        local name = (global.high_contrast and "bottleneck-stoplight-high-scaled") or "bottleneck-stoplight-scaled"
         signal = entity.surface.create_entity{name=name, position=data.position, direction=light.off, force=entity.force}
         data.signal = signal
       elseif not entity.valid and signal.valid then --remove if neither are valid
@@ -130,7 +127,7 @@ local function on_tick()
     global.update_index = index
 
   elseif global.show_bottlenecks < 0 then
-    local show, signals_per_tick = global.show_bottlenecks, global.signals_per_tick or 100
+    local show, signals_per_tick = global.show_bottlenecks, global.signals_per_tick
     local signals = global.signals
     local index, data = global.update_index
 
@@ -150,14 +147,14 @@ local function on_tick()
         if show == -1 then
           change_signal(signal, "off")
         elseif show == -2 then
-          local name = (global.high_contrast and "bottleneck-stoplight-high") or "bottleneck-stoplight"
-          local signal2 = signal.surface.create_entity{name=name, position=data.position, direction=signal.direction, force=signal.force}
+          --local name = (global.high_contrast and "bottleneck-stoplight-high-scaled") or "bottleneck-stoplight-scaled"
+          local signal2 = signal.surface.create_entity{name=data.name, position=data.position, direction=signal.direction, force=signal.force}
           signal.destroy()
           data.signal = signal2
         end
       elseif entity.valid and not signal.valid then
-        local name = (global.high_contrast and "bottleneck-stoplight-high") or "bottleneck-stoplight"
-        signal = entity.surface.create_entity{name=name, position=data.position, direction=light.off, force=entity.force}
+        --local name = (global.high_contrast and "bottleneck-stoplight-high-scaled") or "bottleneck-stoplight-scaled"
+        signal = entity.surface.create_entity{name=data.name, position=data.position, direction=light.off, force=entity.force}
         data.signal = signal
       elseif not entity.valid and signal.valid then
         signal.destroy()
@@ -178,7 +175,14 @@ end
 
 local function rebuild_signals()
   log(MOD.name..": Rebuilding signals")
+  global.signals = {}
+  global.update_index = nil
   for _, surface in pairs(game.surfaces) do
+    for _, signal in pairs(surface.find_entities_filtered{type="storage-tank"}) do
+      if signal.name:find("bottleneck%-stoplight") then
+        signal.destroy()
+      end
+    end
     --[[Find all logistic-chests within the bounds, and pretend that they were just built]]--
     for _, am in pairs(surface.find_entities_filtered{type="logistic-container"}) do
       build_signal({created_entity = am})
@@ -191,15 +195,17 @@ end
 
 local function on_init()
   global = {}
-  global.networks = {}
   global.signals = {}
   global.show_bottlenecks = 1
-  global.signals_per_tick = 100
+  global.signals_per_tick = 10
   global.high_contrast = false
   global.update_index = nil
+  global.update_fulfilled = UPDATE_FULFILLED
+  global.requests_index = nil
 end
 local function on_configuration_changed(data) --luacheck: ignore data
-  --rebuild_signals()
+  global.show_bottlenecks = global.show_bottlenecks or 1
+  rebuild_signals()
 end
 
 --[[ Setup event handlers]]--
@@ -212,7 +218,7 @@ local add_events = {defines.events.on_built_entity, defines.events.on_robot_buil
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(remove_events,destroy_signal)
 script.on_event(add_events, build_signal)
-script.on_event(events.rebuild_overlays, rebuild_signals)
+--script.on_event(events.rebuild_overlays, rebuild_signals)
 script.on_event(events.bottleneck_toggle, bottleneck_toggle)
 
 --[[ Setup remote interface]]--
@@ -220,5 +226,6 @@ local interface = {}
 --print the global to a file
 interface.print_global = function() game.write_file("logs/"..MOD.name.."/global.lua", serpent.block(global, {comment=false}),false) end
 --signals to check per tick
-interface.signals_per_tick = function(count) global.signals_per_tick = tonumber(count) or 100 end
+interface.signals_per_tick = function(count) global.signals_per_tick = tonumber(count) or 10 end
+interface.rebuild = rebuild_signals
 remote.add_interface(MOD.interface, interface)

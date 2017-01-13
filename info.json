@@ -6,5 +6,5 @@
 	"title":"Bottleneck Logistics",
 	"homepage":"https://forums.factorio.com/viewtopic.php?f=144&t=28817",
 	"description":"A tool for locating logistic chests not inside a network.",
-	"dependencies": ["base >= 0.14.0", "Bottleneck >=0.5.1"]
+	"dependencies": ["base >= 0.14.0", "Bottleneck >= 0.6.2"]
 }
