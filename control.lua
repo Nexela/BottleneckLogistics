@@ -6,6 +6,9 @@ MOD.name = "BottleneckLogistics"
 MOD.interface = MOD.name
 MOD.events = remote.call("Bottleneck", "get_ids")
 
+--local Area = require("stdlib/area/area")
+local Position = require("stdlib/area/position")
+
 if DEBUG then
   require("stdlib/utils/quickstart")
 end
@@ -21,8 +24,15 @@ for i=1, 2000 do
   }
   game.raise_event(defines.events.on_built_entity, {created_entity=ent, player_index=game.player.index})
 end
-
 ]]
+
+-------------------------------------------------------------------------------
+local function opposite_direction(direction)
+  if direction == defines.direction.north then return defines.direction.south end
+  if direction == defines.direction.south then return defines.direction.north end
+  if direction == defines.direction.east then return defines.direction.west end
+  if direction == defines.direction.west then return defines.direction.east end
+end
 -------------------------------------------------------------------------------
 --[[Update signals]]
 
@@ -48,8 +58,41 @@ local function update_signal(data)
   end
 end
 
+local function remove_belt_signal(entity)
+  local signal = global.belt_signals[entity.unit_number]
+  if signal and signal.valid then
+    signal.destroy()
+  end
+  global.belt_signals[entity.unit_number]=nil
+end
+
+local function belt_signal(entity)
+  local area = Position.expand_to_area(entity.position, 1)
+  local belts = global.belt_signals
+  remove_belt_signal(entity)
+  for _, belt in pairs(entity.surface.find_entities_filtered{area=area, name=entity.name}) do
+    if entity ~= belt then
+      if entity.direction == belt.direction then
+        remove_belt_signal(belt)
+      elseif entity.direction == opposite_direction(belt.direction) then
+        local name = "bottleneck-stoplight-scaled"
+        local signal1 = entity.surface.create_entity{name=name, position=belt.position, direction=light.red, force=entity.force}
+        local signal2 = entity.surface.create_entity{name=name, position=entity.position, direction=light.red, force=entity.force}
+        belts[belt.unit_number] = signal1
+        belts[entity.unit_number] = signal2
+      end
+    end
+  end
+end
+
 -------------------------------------------------------------------------------
 --[[ Event Actions]]
+local function on_player_rotated_entity(event)
+  local entity=event.entity
+  if entity.type == "transport-belt" then
+    belt_signal(entity)
+  end
+end
 
 local function build_signal(event)
   local entity = event.created_entity
@@ -68,6 +111,8 @@ local function build_signal(event)
     if global.show_bottlenecks == 1 then
       update_signal(data)
     end
+  elseif entity.type == "transport-belt" then
+    belt_signal(entity)
   end
 end
 
@@ -81,6 +126,8 @@ local function destroy_signal(event)
       end
       global.signals[entity.unit_number] = nil
     end
+  elseif entity.type == "transport-belt" then --luacheck: ignore
+    belt_signal(entity)
   end
 end
 
@@ -196,6 +243,7 @@ end
 local function on_init()
   global = {}
   global.signals = {}
+  global.belt_signals = {}
   global.show_bottlenecks = 1
   global.signals_per_tick = 10
   global.high_contrast = false
@@ -203,8 +251,10 @@ local function on_init()
   global.update_fulfilled = UPDATE_FULFILLED
   global.requests_index = nil
 end
+
 local function on_configuration_changed(data) --luacheck: ignore data
   global.show_bottlenecks = global.show_bottlenecks or 1
+  global.belt_signals = global.belt_signals or {}
   rebuild_signals()
 end
 
@@ -216,6 +266,7 @@ local remove_events = {defines.events.on_preplayer_mined_item, defines.events.on
 local add_events = {defines.events.on_built_entity, defines.events.on_robot_built_entity}
 
 script.on_event(defines.events.on_tick, on_tick)
+script.on_event(defines.events.on_player_rotated_entity, on_player_rotated_entity)
 script.on_event(remove_events,destroy_signal)
 script.on_event(add_events, build_signal)
 --script.on_event(events.rebuild_overlays, rebuild_signals)
