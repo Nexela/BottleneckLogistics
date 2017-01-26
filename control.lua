@@ -63,25 +63,31 @@ local function change_signal(signal, signal_color)
     end
 end
 
-local function update_signal(data)
+local function update_signal(data, disable)
     local entity = data.entity
-    if entity.logistic_network then
-        change_signal(data.signal, "green")
+    if not disable then
+        if entity.logistic_network and entity.type == "logistic-container" then
+            change_signal(data.signal, "green")
+        elseif not entity.logistic_network and entity.type == "logistic-container" then
+            change_signal(data.signal, "red")
+        else
+            change_signal(data.signal, "off")
+        end
+        local msg, color = get_per_and_color(data.entity)
+        data.text = data.text and data.text.destroy() and nil
+        if global.show_text then
+            data.text = entity.surface.create_entity{
+                name="bottleneck-text",
+                position={entity.position.x - 1, entity.position.y -0.5},
+                text=msg,
+                color=color
+            }
+            data.text.active = false
+        end
     else
-        change_signal(data.signal, "red")
+        change_signal(data.signal, "off")
+        data.text = (data.text and data.text.destroy()) and nil
     end
-    if data.text and data.text.valid then
-        data.text.destroy()
-    end
-    local msg, color = get_per_and_color(entity)
-    data.text = entity.surface.create_entity{
-        name="flying-text",
-        position={data.position.x-1, data.position.y},
-        force=entity.force,
-        text=msg,
-        color=color
-    }
-    data.active = false
 end
 
 -------------------------------------------------------------------------------
@@ -89,7 +95,7 @@ end
 
 local function build_signal(event)
     local entity = event.created_entity
-    if entity.type == "logistic-container" then
+    if entity.type == "logistic-container" or entity.type == "container" then
         -- local index, network = find_network(entity)
         local data = {}
         if math.abs(entity.prototype.collision_box.left_top.x) > .5 then
@@ -105,15 +111,6 @@ local function build_signal(event)
             direction=light.off,
             force=entity.force
         }
-        data.text = entity.surface.create_entity{
-            name="flying-text",
-            position={data.position.x-1,
-            data.position.y},
-            text = "    ",
-            color = {g=1},
-            force=entity.force
-        }
-        data.text.active = false
         global.signals[entity.unit_number] = data
         if global.show_bottlenecks == 1 then
             update_signal(data)
@@ -123,7 +120,7 @@ end
 
 local function destroy_signal(event)
     local entity = event.entity
-    if entity.type == "logistic-container" then
+    if entity.type == "logistic-container" or entity.type == "container" then
         local data = global.signals[entity.unit_number]
         if data then
             if data.signal and data.signal.valid then
@@ -198,7 +195,7 @@ local function on_tick()
 
             if entity.valid and signal.valid then
                 if show == -1 then
-                    change_signal(signal, "off")
+                    update_signal(data, "off")
                 elseif show == -2 then
                     --local name = (global.high_contrast and "bottleneck-stoplight-high-scaled") or "bottleneck-stoplight-scaled"
                     local signal2 = signal.surface.create_entity{name=data.name, position=data.position, direction=signal.direction, force=signal.force}
@@ -243,12 +240,24 @@ local function rebuild_signals()
     end
 end
 
+local function toggle_text(event)
+    local player = game.players[event.player_index]
+    if not player.admin then
+        player.print('Bottleneck: You do not have privileges to toggle bottleneck chest text')
+        return
+    end
+    global.update_index = nil
+    global.show_text = not global.show_text
+end
+script.on_event("bottleneck-toggle-text", toggle_text)
+
 -------------------------------------------------------------------------------
 --[[Bootstrap]]
 
 local function on_init()
     global = {}
     global.signals = {}
+    global.show_text = true
     global.show_bottlenecks = 1
     global.signals_per_tick = 10
     global.high_contrast = false
@@ -258,6 +267,7 @@ local function on_init()
 end
 local function on_configuration_changed(data) --luacheck: ignore data
     global.show_bottlenecks = global.show_bottlenecks or 1
+    global.show_text = global.show_text or true
     rebuild_signals()
 end
 
