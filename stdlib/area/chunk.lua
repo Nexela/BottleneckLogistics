@@ -2,16 +2,16 @@
 --- <p>A chunk represents a 32x32 area of a surface in factorio.</p>
 -- @module Chunk
 
-require 'stdlib/core'
-require 'stdlib/area/position'
+local Core = require 'stdlib/core'
+local Position = require 'stdlib/area/position'
 
-Chunk = {}
-MAX_UINT = 4294967296
+local Chunk = {}
+local MAX_UINT = 4294967296
 
 --- Calculates the chunk coordinates for the tile position given
---  @param position to calculate the chunk for
---  @return the chunk position as a table
---  @usage
+-- @param position to calculate the chunk for
+-- @return the chunk position as a table
+-- @usage
 ----local chunk_x = Chunk.from_position(pos).x
 function Chunk.from_position(position)
     position = Position.to_table(position)
@@ -32,7 +32,7 @@ end
 -- @param chunk_pos to convert to an area
 -- @return area that chunk is valid for
 function Chunk.to_area(chunk_pos)
-    fail_if_missing(chunk_pos, "missing chunk_pos argument")
+    Core.fail_if_missing(chunk_pos, "missing chunk_pos argument")
     chunk_pos = Position.to_table(chunk_pos)
 
     local left_top = { x = chunk_pos.x * 32, y = chunk_pos.y * 32 }
@@ -41,13 +41,13 @@ end
 
 --- Gets user data from the chunk, stored in a mod's global data.
 --- <p> The data will persist between loads</p>
---  @param surface the surface to look up data for
---  @param chunk_pos the chunk coordinates to look up data for
---  @param default_value (optional) to set and return if no data exists
---  @return the data, or nil if no data exists for the chunk
+-- @param surface the surface to look up data for
+-- @param chunk_pos the chunk coordinates to look up data for
+-- @param default_value (optional) to set and return if no data exists
+-- @return the data, or nil if no data exists for the chunk
 function Chunk.get_data(surface, chunk_pos, default_value)
-    fail_if_missing(surface, "missing surface argument")
-    fail_if_missing(chunk_pos, "missing chunk_pos argument")
+    Core.fail_if_missing(surface, "missing surface argument")
+    Core.fail_if_missing(chunk_pos, "missing chunk_pos argument")
     if not global._chunk_data then
         if not default_value then return nil end
         global._chunk_data = {}
@@ -65,13 +65,13 @@ end
 
 --- Sets user data on the chunk, stored in a mod's global data.
 --- <p> The data will persist between loads</p>
---  @param surface the surface to look up data for
---  @param chunk_pos the chunk coordinates to look up data for
---  @param data the data to set (or nil to erase the data for the chunk)
---  @return the previous data associated with the chunk, or nil if the chunk had no previous data
+-- @param surface the surface to look up data for
+-- @param chunk_pos the chunk coordinates to look up data for
+-- @param data the data to set (or nil to erase the data for the chunk)
+-- @return the previous data associated with the chunk, or nil if the chunk had no previous data
 function Chunk.set_data(surface, chunk_pos, data)
-    fail_if_missing(surface, "missing surface argument")
-    fail_if_missing(chunk_pos, "missing chunk_pos argument")
+    Core.fail_if_missing(surface, "missing surface argument")
+    Core.fail_if_missing(chunk_pos, "missing chunk_pos argument")
     if not global._chunk_data then global._chunk_data = {} end
 
     local idx = Chunk.get_index(surface, chunk_pos)
@@ -83,11 +83,11 @@ end
 
 --- Calculates and returns a stable, deterministic, unique integer id for the given chunk_pos
 --- <p> The id will not change once calculated</p>
---  @param surface the chunk is on
---  @param chunk_pos of the chunk
+-- @param surface the chunk is on
+-- @param chunk_pos of the chunk
 function Chunk.get_index(surface, chunk_pos)
-    fail_if_missing(surface, "missing surface argument")
-    fail_if_missing(chunk_pos, "missing chunk_pos argument")
+    Core.fail_if_missing(surface, "missing surface argument")
+    Core.fail_if_missing(chunk_pos, "missing chunk_pos argument")
     if not global._next_chunk_index then global._next_chunk_index = 0 end
     if not global._chunk_indexes then global._chunk_indexes = {} end
 

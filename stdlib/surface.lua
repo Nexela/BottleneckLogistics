@@ -1,20 +1,20 @@
 --- Surface module
 -- @module Surface
 
-require 'stdlib/core'
-require 'stdlib/area/area'
+local Core = require 'stdlib/core'
+local Area = require 'stdlib/area/area'
 
-Surface = {}
+local Surface = {}
 
 --- Flexible, safe lookup function for surfaces. <p>
---  May be given a string, the name of a surface, or may be given a table with surface names,
---  may be given the a surface object, or may be given a table of surface objects, or
---  may be given nil. <p>
---  Returns an array of surface objects of all valid, existing surfaces
---  If a surface does not exist for the surface, it is ignored, if no surfaces
---  are given, an empty array is returned.
+-- May be given a string, the name of a surface, or may be given a table with surface names,
+-- may be given the a surface object, or may be given a table of surface objects, or
+-- may be given nil. <p>
+-- Returns an array of surface objects of all valid, existing surfaces
+-- If a surface does not exist for the surface, it is ignored, if no surfaces
+-- are given, an empty array is returned.
 -- @param surface to lookup
--- @return the list of surfaces looked up
+-- @treturn LuaSurface[] the list of surfaces looked up
 function Surface.lookup(surface)
     if not surface then
         return {}
@@ -39,14 +39,14 @@ function Surface.lookup(surface)
 end
 
 --- Given search criteria, a table that contains a name or type of entity to search for,
---  and optionally surface or force, searches all loaded chunks for the entities that
---  match the critera.
---  @usage
+-- and optionally surface or force, searches all loaded chunks for the entities that
+-- match the critera.
+-- @usage
 ----Surface.find_all_entities({ type = 'unit', surface = 'nauvis', area = {{-1000,20},{-153,2214}}) --returns a list containing all unit entities on the nauvis surface in the given area
--- @param search_criteria a table of criteria. Must contain either the *name* or *type* or *force* of an entity. May contain *surface* or *force* or *area*.
--- @return an array of all entities that matched the criteria
+-- @tparam table search_criteria a table of criteria. Must contain either the *name* or *type* or *force* of an entity. May contain *surface* or *force* or *area*.
+-- @treturn table an array of all entities that matched the criteria
 function Surface.find_all_entities(search_criteria)
-    fail_if_missing(search_criteria, "missing search_criteria argument")
+    Core.fail_if_missing(search_criteria, "missing search_criteria argument")
     if search_criteria.name == nil and search_criteria.type == nil and search_criteria.force == nil and search_criteria.area == nil then
         error("Missing search criteria field: name or type or force or area of entity", 2)
     end
@@ -55,7 +55,7 @@ function Surface.find_all_entities(search_criteria)
     if search_criteria.surface == nil then
         surface_list = game.surfaces
     end
-    
+
     local result = {}
 
     for _, surface in pairs(surface_list) do
@@ -77,10 +77,10 @@ end
 --- determine surface extension
 -- returns Area covering entire extension of this surface
 -- useful, if you compare total number of chunks with number of chunks of this area
--- @param surface A surface table, see lookup() to get one.
--- @return Area
+-- @tparam LuaSurface surface
+-- @treturn table Area
 function Surface.get_surface_bounds(surface)
-    fail_if_missing(surface, "missing surface value")
+    Core.fail_if_missing(surface, "missing surface value")
     local x1, y1, x2, y2 = 0, 0, 0, 0
 
     for chunk in surface.get_chunks() do
@@ -98,6 +98,5 @@ function Surface.get_surface_bounds(surface)
 
     return Area.construct(x1*32, y1*32, x2*32, y2*32)
 end
-
 
 return Surface

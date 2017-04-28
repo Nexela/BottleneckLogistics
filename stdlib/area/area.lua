@@ -1,10 +1,10 @@
 --- Area module
 -- @module Area
 
-require 'stdlib/core'
-require 'stdlib/area/position'
+local Core = require 'stdlib/core'
+local Position = require 'stdlib/area/position'
 
-Area = {}
+local Area = {}
 
 --- Creates an area from the 2 positions p1 and p2
 -- @param x1 x-position of left_top, first point
@@ -28,7 +28,7 @@ end
 -- @param area the area
 -- @return size of the area
 function Area.size(area)
-    fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(area, "missing area value")
     area = Area.to_table(area)
 
     local left_top = Position.to_table(area.left_top)
@@ -44,8 +44,8 @@ end
 -- @param pos the position to check
 -- @return true if the position is inside of the area
 function Area.inside(area, pos)
-    fail_if_missing(pos, "missing pos value")
-    fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(pos, "missing pos value")
+    Core.fail_if_missing(area, "missing area value")
     pos = Position.to_table(pos)
     area = Area.to_table(area)
 
@@ -59,8 +59,8 @@ end
 -- @param amount to shrink each edge of the area inwards by
 -- @return the shrunk area
 function Area.shrink(area, amount)
-    fail_if_missing(area, "missing area value")
-    fail_if_missing(amount, "missing amount value")
+    Core.fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(amount, "missing amount value")
     if amount < 0 then error("Can not shrunk area by a negative amount (see Area.expand)!", 2) end
     area = Area.to_table(area)
 
@@ -74,8 +74,8 @@ end
 -- @param amount to expand each edge of the area outwards by
 -- @return the expanded area
 function Area.expand(area, amount)
-    fail_if_missing(area, "missing area value")
-    fail_if_missing(amount, "missing amount value")
+    Core.fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(amount, "missing amount value")
     if amount < 0 then error("Can not expand area by a negative amount (see Area.shrink)!", 2) end
     area = Area.to_table(area)
 
@@ -88,7 +88,7 @@ end
 -- @param area the area
 -- @return area to find the center for
 function Area.center(area)
-    fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(area, "missing area value")
     area = Area.to_table(area)
 
     local dist_x = area.right_bottom.x - area.left_top.x
@@ -102,8 +102,8 @@ end
 -- @param pos the {x, y} amount to offset the area
 -- @return offset area by the position values
 function Area.offset(area, pos)
-    fail_if_missing(area, "missing area value")
-    fail_if_missing(pos, "missing pos value")
+    Core.fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(pos, "missing pos value")
     area = Area.to_table(area)
 
     return {left_top = Position.add(area.left_top, pos), right_bottom = Position.add(area.right_bottom, pos)}
@@ -113,13 +113,13 @@ end
 -- @param area the area
 -- @return the rounded integer representation
 function Area.round_to_integer(area)
-    fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(area, "missing area value")
     area = Area.to_table(area)
 
     local left_top = Position.to_table(area.left_top)
     local right_bottom = Position.to_table(area.right_bottom)
     return {left_top = {x = math.floor(left_top.x), y = math.floor(left_top.y)},
-            right_bottom = {x = math.ceil(right_bottom.x), y = math.ceil(right_bottom.y)}}
+        right_bottom = {x = math.ceil(right_bottom.x), y = math.ceil(right_bottom.y)}}
 end
 
 --- Iterates an area.
@@ -130,15 +130,15 @@ end
 -- @param area the area
 -- @return iterator
 function Area.iterate(area)
-    fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(area, "missing area value")
 
     local iterator = {idx = 0}
-    function iterator.iterate(area)
+    function iterator.iterate(area2) --luacheck: ignore
         local rx = area.right_bottom.x - area.left_top.x + 1
         local dx = iterator.idx % rx
         local dy = math.floor(iterator.idx / rx)
         iterator.idx = iterator.idx + 1
-        if (area.left_top.y + dy) > area.right_bottom.y  then
+        if (area.left_top.y + dy) > area.right_bottom.y then
             return
         end
         return (area.left_top.x + dx), (area.left_top.y + dy)
@@ -150,7 +150,7 @@ end
 ---<p><i>Example:</i></p>
 ---<pre>
 ---for x, y in Area.spiral_iterate({{-2, -1}, {2, 1}}) do
-----  print("(" .. x .. ", " .. y .. ")")
+---- print("(" .. x .. ", " .. y .. ")")
 ---end
 --- prints: (0, 0) (1, 0) (1, 1) (0, 1) (-1, 1) (-1, 0) (-1, -1) (0, -1) (1, -1) (2, -1) (2, 0) (2, 1) (-2, 1) (-2, 0) (-2, -1)
 ---</pre>
@@ -159,7 +159,7 @@ end
 -- @param area the area
 -- @return iterator
 function Area.spiral_iterate(area)
-    fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(area, "missing area value")
     area = Area.to_table(area)
 
     local rx = area.right_bottom.x - area.left_top.x + 1
@@ -174,8 +174,8 @@ function Area.spiral_iterate(area)
     local dx = 0
     local dy = -1
     local iterator = {list = {}, idx = 1}
-    for i = 1, math.max(rx, ry) * math.max(rx, ry) do
-        if -(half_x) <= x and x <= half_x and -(half_y) <= y and y <= half_y then
+    for _ = 1, math.max(rx, ry) * math.max(rx, ry) do
+        if - (half_x) <= x and x <= half_x and - (half_y) <= y and y <= half_y then
             table.insert(iterator.list, {x, y})
         end
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1 - y) then
@@ -187,12 +187,12 @@ function Area.spiral_iterate(area)
         y = y + dy
     end
 
-    function iterator.iterate(area)
+    function iterator.iterate()
         if #iterator.list < iterator.idx then return end
-        local x, y = unpack(iterator.list[iterator.idx])
+        local x2, y2 = unpack(iterator.list[iterator.idx])
         iterator.idx = iterator.idx + 1
 
-        return (center_x + x), (center_y + y)
+        return (center_x + x2), (center_y + y2)
     end
     return iterator.iterate, Area.to_table(area), 0
 end
@@ -201,7 +201,7 @@ end
 -- @param area the area to adjust
 -- @return a normalized area, always { left_top = {x = ..., y = ...}, right_bottom = {x = ..., y = ...} }
 function Area.normalize(area)
-    fail_if_missing(area, "missing area value")
+    Core.fail_if_missing(area, "missing area value")
     area = Area.to_table(area)
 
     local left_top = Position.copy(area.left_top)
@@ -233,12 +233,11 @@ end
 -- @param area_arr the area to convert
 -- @return a converted area, { left_top = area_arr[1], right_bottom = area_arr[2] }
 function Area.to_table(area_arr)
-    fail_if_missing(area_arr, "missing area value")
+    Core.fail_if_missing(area_arr, "missing area value")
     if #area_arr == 2 then
         return { left_top = Position.to_table(area_arr[1]), right_bottom = Position.to_table(area_arr[2]) }
     end
     return area_arr
 end
-
 
 return Area
