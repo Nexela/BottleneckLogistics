@@ -1,10 +1,10 @@
 {
 	"name":"BottleneckLogistics",
 	"author":"Nexela",
-	"version":"1.0.1",
+	"version":"1.2.0",
 	"factorio_version": "0.15",
 	"title":"Bottleneck Logistics",
 	"homepage":"https://forums.factorio.com/viewtopic.php?f=144&t=28817",
 	"description":"A tool for locating logistic chests not inside a network.",
-	"dependencies": ["base >= 0.14.0", "Bottleneck >= 0.6.2"]
+	"dependencies": ["base >= 0.14.0", "Bottleneck >= 0.7.0"]
 }
